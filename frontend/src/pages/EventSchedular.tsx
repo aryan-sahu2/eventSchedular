@@ -72,31 +72,36 @@ const EventSchedular: React.FC = () => {
     };
 
     websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "EVENT_UPDATE" && data.payload) {
-        const updatedEvent: Event = {
-          ...data.payload,
-          // Ensure dates are parsed correctly if they come as ISO strings
-          sendAt: data.payload.sendAt,
-          createdAt: data.payload.createdAt,
-          updatedAt: data.payload.updatedAt,
-        };
+      try {
+        const data = JSON.parse(event.data);
+        console.log("data: ", data.data);
+        if (data.type === "eventUpdate" ) {
+          const updatedEvent: Event = {
+            ...data.data,
+            // Ensure dates are parsed correctly if they come as ISO strings
+            sendAt: data.data.sendAt,
+            createdAt: data.data.createdAt,
+            updatedAt: data.data.updatedAt,
+          };
 
-        // Update the events list based on the incoming update
-        setEvents((prevEvents) => {
-          const existingIndex = prevEvents.findIndex(
-            (e) => e.id === updatedEvent.id
-          );
-          if (existingIndex > -1) {
-            // If event exists, update it
-            const newEvents = [...prevEvents];
-            newEvents[existingIndex] = updatedEvent;
-            return newEvents;
-          } else {
-            // If event is new (e.g., just scheduled), add it
-            return [...prevEvents, updatedEvent];
-          }
-        });
+          // Update the events list based on the incoming update
+          setEvents((prevEvents) => {
+            const existingIndex = prevEvents.findIndex(
+              (e) => e.id === updatedEvent.id
+            );
+            if (existingIndex > -1) {
+              // If event exists, update it
+              const newEvents = [...prevEvents];
+              newEvents[existingIndex] = updatedEvent;
+              return newEvents;
+            } else {
+              // If event is new (e.g., just scheduled), add it
+              return [...prevEvents, updatedEvent];
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error in ws:", error);
       }
     };
 
@@ -388,7 +393,7 @@ const EventSchedular: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {events
+                  {events && events
                     .filter((event) =>
                       filterStatus ? event.status === filterStatus : true
                     ) // Apply client-side filter for WS updates

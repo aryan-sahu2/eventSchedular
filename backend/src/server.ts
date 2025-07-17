@@ -3,15 +3,20 @@ import dotenv from "dotenv";
 import cors from "cors";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
-import { WebSocketServer, WebSocket } from "ws"; // Import WebSocket modules
-import { createServer } from "http"; // Import createServer for HTTP server
+import { WebSocketServer, WebSocket } from "ws";
+import { createServer } from "http";
 
 // Import configuration and database/queue connection functions
-import { connectDb, disconnectDb, closeQueue } from "./config";
+import { connectDb, disconnectDb, closeQueue, redisConnection } from "./config";
 
 // Import event routes
 import eventRoutes from "./routes/event.routes";
-// import { addWebSocketClient } from "./utils/websocket";
+// Import WebSocket utilities
+import { 
+  setWebSocketClients, 
+  initializeWebSocketRedis, 
+  closeWebSocketRedis 
+} from "./utils/websocket";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -33,11 +38,16 @@ const wss = new WebSocketServer({ server });
 // Store active WebSocket clients
 const clients: Set<WebSocket> = new Set();
 
+// Initialize Redis for WebSocket broadcasting
+initializeWebSocketRedis(redisConnection);
+
+// Set the clients Set in the websocket utils
+setWebSocketClients(clients);
+
 // WebSocket connection handler
 wss.on("connection", (ws) => {
   console.log("New WebSocket client connected");
 
-  // addWebSocketClient(ws);
   clients.add(ws);
 
   // Send initial connection message
@@ -52,10 +62,11 @@ wss.on("connection", (ws) => {
   ws.on("message", (message: string) => {
     console.log("Received message:", message);
   });
+  
   console.log("WebSocket client connected. Total clients:", clients.size);
 
   ws.on("close", () => {
-    clients.delete(ws); // Remove client on close
+    clients.delete(ws);
     console.log("WebSocket client disconnected. Total clients:", clients.size);
   });
 
@@ -63,24 +74,6 @@ wss.on("connection", (ws) => {
     console.error("WebSocket error:", error);
   });
 });
-
-// /**
-//  * Broadcasts an event update to all connected WebSocket clients.
-//  * This function will be imported and called by the EventService
-//  * whenever an event's status changes in the database.
-//  * @param eventData - The updated event object to broadcast.
-//  */
-// export const broadcastEventUpdate = (eventData: any) => {
-//   const message = JSON.stringify({ type: "EVENT_UPDATE", payload: eventData });
-//   for (const client of clients) {
-//     if (client.readyState === WebSocket.OPEN) {
-//       client.send(message);
-//     }
-//   }
-//   console.log(
-//     `Broadcasted update for event ID: ${eventData.id}, Status: ${eventData.status}`
-//   );
-// };
 
 // --- Middleware Setup ---
 
@@ -95,22 +88,21 @@ app.use(express.json());
 // Swagger definition options
 const swaggerOptions = {
   definition: {
-    openapi: "3.0.0", // Specify the OpenAPI version
+    openapi: "3.0.0",
     info: {
-      title: "Scheduler Service API", // Title of your API
-      version: "1.0.0", // Version of your API
+      title: "Scheduler Service API",
+      version: "1.0.0",
       description:
-        "API documentation for the Event Notification Scheduler Service", // Description
+        "API documentation for the Event Notification Scheduler Service",
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`, // Base URL for your API
+        url: `http://localhost:${PORT}`,
         description: "Development server",
       },
     ],
   },
-  // Paths to files containing OpenAPI annotations (JSDoc comments)
-  apis: ["./src/routes/*.ts"], // Look for annotations in all .ts files within the routes directory
+  apis: ["./src/routes/*.ts"],
 };
 
 // Initialize swagger-jsdoc to generate the OpenAPI specification
@@ -122,15 +114,13 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // --- API Routes ---
 
 // Mount the event routes under the '/api' prefix.
-// This means all routes defined in event.routes.ts will be prefixed with /api (e.g., /api/events).
 app.use("/api", eventRoutes);
 
 // --- Error Handling Middleware ---
 
 // This middleware catches any errors passed from route handlers or other middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error("Global Error Handler:", err.stack); // Log the error stack for debugging
-  // Send a generic 500 Internal Server Error response for unhandled errors
+  console.error("Global Error Handler:", err.stack);
   res
     .status(500)
     .json({ message: "Something went wrong!", error: err.message });
@@ -146,7 +136,6 @@ const startServer = async () => {
 
     // Start listening for incoming requests on the specified port
     server.listen(PORT, () => {
-      // Use 'server.listen' instead of 'app.listen'
       console.log(`Server is running on port ${PORT}`);
       console.log(`API Docs available at http://localhost:${PORT}/api-docs`);
       console.log(`WebSocket server running on ws://localhost:${PORT}`);
@@ -155,24 +144,26 @@ const startServer = async () => {
     // Handle graceful shutdown
     process.on("SIGINT", async () => {
       console.log("SIGINT signal received: Closing connections...");
-      await disconnectDb(); // Disconnect from database
-      await closeQueue(); // Close BullMQ queue
-      wss.close(() => console.log("WebSocket server closed.")); // Close WebSocket server
-      server.close(() => console.log("HTTP server closed.")); // Close HTTP server
-      process.exit(0); // Exit the process
+      await disconnectDb();
+      await closeQueue();
+      closeWebSocketRedis(); // Close Redis connections
+      wss.close(() => console.log("WebSocket server closed."));
+      server.close(() => console.log("HTTP server closed."));
+      process.exit(0);
     });
 
     process.on("SIGTERM", async () => {
       console.log("SIGTERM signal received: Closing connections...");
-      await disconnectDb(); // Disconnect from database
-      await closeQueue(); // Close BullMQ queue
-      wss.close(() => console.log("WebSocket server closed.")); // Close WebSocket server
-      server.close(() => console.log("HTTP server closed.")); // Close HTTP server
-      process.exit(0); // Exit the process
+      await disconnectDb();
+      await closeQueue();
+      closeWebSocketRedis(); // Close Redis connections
+      wss.close(() => console.log("WebSocket server closed."));
+      server.close(() => console.log("HTTP server closed."));
+      process.exit(0);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
-    process.exit(1); // Exit with error code if server fails to start
+    process.exit(1);
   }
 };
 
