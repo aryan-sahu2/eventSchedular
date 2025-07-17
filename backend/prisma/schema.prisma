@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define the Event model. This corresponds to a table named 'Event' in your database.
+model Event {
+  // Unique identifier for the event.
+  // @id: Marks this field as the primary key.
+  // @default(uuid()): Generates a UUID for new records by default.
+  // @map("id"): Maps this field to a column named 'id' in the database.
+  id String @id @default(uuid()) @map("id")
+
+  // The message content to be sent.
+  message String
+
+  // The email address to which the message should be sent.
+  // This is a new field based on your frontend requirements (email to send it to).
+  recipientEmail String
+
+  // The scheduled time for the message to be sent.
+  // @map("send_at"): Maps this field to a column named 'send_at' in the database.
+  sendAt DateTime @map("send_at")
+
+  // The current status of the event.
+  // Enum 'EventStatus' will be defined below to ensure type safety and valid states.
+  // @default(SCHEDULED): Sets the default status for new events.
+  status EventStatus @default(SCHEDULED)
+
+  // The number of times the event has been retried.
+  // Used for the retry mechanism (up to 3 times).
+  // @default(0): Initializes retry count to 0.
+  retryCount Int @default(0)
+
+  // Timestamp when the event was created.
+  // @default(now()): Sets the creation time automatically.
+  // @map("created_at"): Maps this field to a column named 'created_at' in the database.
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Timestamp when the event was last updated.
+  // @updatedAt: Automatically updates this field whenever the record is changed.
+  // @map("updated_at"): Maps this field to a column named 'updated_at' in the database.
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // @@map("events"): Explicitly names the database table 'events'.
+  // This is good practice to avoid default pluralization issues and keep names consistent.
+  @@map("events")
+}
+
+// Define an Enum for the possible statuses of an Event.
+// This provides a clear, constrained set of values for the 'status' field.
+enum EventStatus {
+  SCHEDULED // Event is scheduled and waiting to be processed
+  SENT // Message has been successfully sent
+  FAILED // Message sending failed after all retries
+  RETRIED // Message sending failed, but a retry is scheduled/in progress
+  PROCESSING // Event is currently being processed by a worker
+}
