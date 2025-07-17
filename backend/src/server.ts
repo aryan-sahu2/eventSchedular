@@ -11,7 +11,7 @@ import { connectDb, disconnectDb, closeQueue } from "./config";
 
 // Import event routes
 import eventRoutes from "./routes/event.routes";
-import { addWebSocketClient } from "./utils/websocket";
+// import { addWebSocketClient } from "./utils/websocket";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -35,7 +35,23 @@ const clients: Set<WebSocket> = new Set();
 
 // WebSocket connection handler
 wss.on("connection", (ws) => {
-  addWebSocketClient(ws);
+  console.log("New WebSocket client connected");
+
+  // addWebSocketClient(ws);
+  clients.add(ws);
+
+  // Send initial connection message
+  ws.send(
+    JSON.stringify({
+      type: "connected",
+      message: "Connected to event scheduler WebSocket",
+    })
+  );
+
+  // Handle incoming messages (if needed)
+  ws.on("message", (message: string) => {
+    console.log("Received message:", message);
+  });
   console.log("WebSocket client connected. Total clients:", clients.size);
 
   ws.on("close", () => {
@@ -48,23 +64,23 @@ wss.on("connection", (ws) => {
   });
 });
 
-/**
- * Broadcasts an event update to all connected WebSocket clients.
- * This function will be imported and called by the EventService
- * whenever an event's status changes in the database.
- * @param eventData - The updated event object to broadcast.
- */
-export const broadcastEventUpdate = (eventData: any) => {
-  const message = JSON.stringify({ type: "EVENT_UPDATE", payload: eventData });
-  for (const client of clients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  }
-  console.log(
-    `Broadcasted update for event ID: ${eventData.id}, Status: ${eventData.status}`
-  );
-};
+// /**
+//  * Broadcasts an event update to all connected WebSocket clients.
+//  * This function will be imported and called by the EventService
+//  * whenever an event's status changes in the database.
+//  * @param eventData - The updated event object to broadcast.
+//  */
+// export const broadcastEventUpdate = (eventData: any) => {
+//   const message = JSON.stringify({ type: "EVENT_UPDATE", payload: eventData });
+//   for (const client of clients) {
+//     if (client.readyState === WebSocket.OPEN) {
+//       client.send(message);
+//     }
+//   }
+//   console.log(
+//     `Broadcasted update for event ID: ${eventData.id}, Status: ${eventData.status}`
+//   );
+// };
 
 // --- Middleware Setup ---
 

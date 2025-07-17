@@ -3,7 +3,6 @@ import axios from "axios";
 import { format } from "date-fns"; // For date formatting and parsing
 import { parseISO } from "date-fns/fp";
 
-
 // Define the base URL for your backend API (HTTP for REST calls)
 const API_BASE_URL = "http://localhost:3000/api";
 // Define the WebSocket URL for your backend (ws for WebSocket connection)
@@ -32,6 +31,7 @@ const EventSchedular: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [wsError, setWsError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // State for filtering events by status
@@ -67,8 +67,8 @@ const EventSchedular: React.FC = () => {
     const websocket = new WebSocket(WS_URL);
 
     websocket.onopen = () => {
+      setWsError(null);
       console.log("WebSocket connection established.");
-      // You might want to send an initial message or authenticate here if needed
     };
 
     websocket.onmessage = (event) => {
@@ -107,7 +107,7 @@ const EventSchedular: React.FC = () => {
 
     websocket.onerror = (error) => {
       console.error("WebSocket error:", error);
-      setError(
+      setWsError(
         "WebSocket connection error. Live updates may not be available."
       );
     };
@@ -263,6 +263,15 @@ const EventSchedular: React.FC = () => {
                 {error}
               </div>
             )}
+            {wsError && (
+              <div
+                className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm"
+                role="alert"
+              >
+                {wsError}
+              </div>
+            )}
+
             {successMessage && (
               <div
                 className="p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-sm"
@@ -326,6 +335,14 @@ const EventSchedular: React.FC = () => {
               role="alert"
             >
               {error}
+            </div>
+          )}
+          {wsError && !loading && (
+            <div
+              className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm mb-4"
+              role="alert"
+            >
+              {wsError}
             </div>
           )}
 
