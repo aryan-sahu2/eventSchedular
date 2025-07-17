@@ -4,11 +4,11 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "dev": "nodemon --exec ts-node src/server.ts",
+    "dev": "nodemon --watch src --ignore 'src/workers/*' --ext ts,json --exec ts-node src/server.ts",
     "build": "tsc",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "worker:dev": "nodemon --exec ts-node src/workers/event.worker.ts",
+    "worker:dev": "nodemon --watch src/workers --watch src/services --watch src/config --ignore 'src/server.ts' --ext ts,json --exec ts-node src/workers/event.worker.ts",
     "worker:start": "node dist/workers/event.worker.js"
   },
   "keywords": [],

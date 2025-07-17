@@ -220,9 +220,8 @@ eventWorker.on("close" as any, () => {
 // Function to start the worker
 const startWorker = async () => {
   try {
-    // await connectDb(); // Connect to the database for worker operations
+    await connectDb(); // Connect to the database for worker operations
 
-    // NO ACTUAL NEED TO connect DB as it has already started in the server.ts on this local machine
     console.log("Event Worker started and listening for jobs...");
   } catch (error) {
     console.error("Failed to start event worker:", error);

@@ -11,6 +11,7 @@ import { connectDb, disconnectDb, closeQueue } from "./config";
 
 // Import event routes
 import eventRoutes from "./routes/event.routes";
+import { addWebSocketClient } from "./utils/websocket";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -34,7 +35,7 @@ const clients: Set<WebSocket> = new Set();
 
 // WebSocket connection handler
 wss.on("connection", (ws) => {
-  clients.add(ws); // Add new client to the set
+  addWebSocketClient(ws);
   console.log("WebSocket client connected. Total clients:", clients.size);
 
   ws.on("close", () => {

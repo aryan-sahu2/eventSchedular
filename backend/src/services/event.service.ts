@@ -9,9 +9,9 @@ import {
 // This queue will be used to dispatch event processing jobs to the worker.
 import { eventQueue } from "../config";
 
-// Import the broadcastEventUpdate function from the server file.
+// Import the broadcastEventUpdate function from the websocket utility.
 // This function will be used to push real-time updates to connected WebSocket clients.
-import { broadcastEventUpdate } from "../server";
+import { broadcastEventUpdate } from "../utils/websocket";
 
 /**
  * EventService class to encapsulate the business logic for event management.
